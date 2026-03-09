@@ -2,6 +2,8 @@
 
 TypeScript SDK for the [Skala](https://github.com/SKALA-sec/SKALA-TS-SDK) abuse scoring API.
 
+Requires Node 18+ or Bun 1.0+.
+
 ## Install
 
 ```bash
@@ -44,13 +46,44 @@ await skala.outcome({
 
 ## Timeout Fallback
 
-The SDK auto-allows requests when the API is unreachable so scoring never blocks your users:
+`score()` auto-allows when the API is unreachable (timeout or network failure), so scoring does not block user traffic.
+
+HTTP API responses (for example 4xx/5xx) still throw errors.
 
 ```ts
 const result = await skala.score({ ... });
 
 if ('fallback' in result) {
-  // API was unreachable — request was auto-allowed
+  // request was auto-allowed by SDK fallback
+  // result.reason_codes is SDK_TIMEOUT_FALLBACK or SDK_NETWORK_FALLBACK
+}
+```
+
+## Error Handling
+
+Use structured SDK errors for predictable handling:
+
+```ts
+import {
+  Skala,
+  SkalaApiError,
+  SkalaNetworkError,
+  SkalaTimeoutError,
+} from '@skalaio/node';
+
+try {
+  await skala.outcome({ request_id: 'req_123', outcome: 'confirmed_fraud' });
+} catch (error) {
+  if (error instanceof SkalaTimeoutError) {
+    // request timed out
+  } else if (error instanceof SkalaNetworkError) {
+    // API unreachable (DNS/TLS/connectivity)
+  } else if (error instanceof SkalaApiError) {
+    // API returned non-2xx
+    console.error(error.status, error.body, error.requestId);
+  } else {
+    throw error;
+  }
 }
 ```
 
