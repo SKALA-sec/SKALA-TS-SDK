@@ -1,0 +1,39 @@
+{
+  "name": "skala",
+  "version": "0.2.0",
+  "description": "Skala abuse scoring SDK for Node and Bun",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SKALA-sec/SKALA-TS-SDK.git",
+    "directory": "sdk"
+  },
+  "homepage": "https://github.com/SKALA-sec/SKALA-TS-SDK",
+  "bugs": {
+    "url": "https://github.com/SKALA-sec/SKALA-TS-SDK/issues"
+  },
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "rm -rf dist && tsc -p tsconfig.json",
+    "test": "bun test src/client.test.ts src/release.test.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3"
+  }
+}
