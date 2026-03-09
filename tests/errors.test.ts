@@ -2,8 +2,10 @@
 
 import { describe, expect, it, mock } from 'bun:test'
 import { Skala } from '../src/client'
+import { SkalaApiError } from '../src/errors'
 
 const SCORE_REQ = { event_type: 'signup' as const, ip: '1.2.3.4', email: 'err@test.com' }
+const UUID_REGEX = /^[0-9a-f-]{36}$/i
 
 describe('error handling', () => {
   it('throws on 401 without retrying', async () => {
@@ -17,7 +19,15 @@ describe('error handling', () => {
       retries: 2,
     })
 
-    await expect(skala.score(SCORE_REQ)).rejects.toThrow('status 401')
+    const error = await skala.score(SCORE_REQ).catch((err) => err)
+
+    expect(error).toBeInstanceOf(SkalaApiError)
+    if (error instanceof SkalaApiError) {
+      expect(error.status).toBe(401)
+      expect(error.body).toEqual({ error: 'unauthorized' })
+      expect(error.requestId).toMatch(UUID_REGEX)
+    }
+
     expect(fetchMock).toHaveBeenCalledTimes(1)
   })
 
@@ -32,7 +42,7 @@ describe('error handling', () => {
       retries: 2,
     })
 
-    await expect(skala.score(SCORE_REQ)).rejects.toThrow('status 422')
+    await expect(skala.score(SCORE_REQ)).rejects.toBeInstanceOf(SkalaApiError)
     expect(fetchMock).toHaveBeenCalledTimes(1)
   })
 
@@ -47,7 +57,28 @@ describe('error handling', () => {
       retries: 2,
     })
 
-    await expect(skala.score(SCORE_REQ)).rejects.toThrow('status 403')
+    await expect(skala.score(SCORE_REQ)).rejects.toBeInstanceOf(SkalaApiError)
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+  })
+
+  it('does not retry on 429 rate limit responses', async () => {
+    const fetchMock = mock(async () => {
+      return new Response(JSON.stringify({ error: 'rate_limited' }), { status: 429 })
+    })
+
+    const skala = new Skala({
+      apiKey: 'sk_test',
+      fetch: fetchMock as typeof fetch,
+      retries: 3,
+    })
+
+    const error = await skala.score(SCORE_REQ).catch((err) => err)
+    expect(error).toBeInstanceOf(SkalaApiError)
+    if (error instanceof SkalaApiError) {
+      expect(error.status).toBe(429)
+      expect(error.body).toEqual({ error: 'rate_limited' })
+    }
+
     expect(fetchMock).toHaveBeenCalledTimes(1)
   })
 
@@ -62,7 +93,7 @@ describe('error handling', () => {
       retries: 2,
     })
 
-    await expect(skala.score(SCORE_REQ)).rejects.toThrow('status 500')
+    await expect(skala.score(SCORE_REQ)).rejects.toBeInstanceOf(SkalaApiError)
     expect(fetchMock).toHaveBeenCalledTimes(3)
   })
 
@@ -77,7 +108,7 @@ describe('error handling', () => {
       retries: 0,
     })
 
-    await expect(skala.score(SCORE_REQ)).rejects.toThrow('status 502')
+    await expect(skala.score(SCORE_REQ)).rejects.toBeInstanceOf(SkalaApiError)
     expect(fetchMock).toHaveBeenCalledTimes(1)
   })
 
@@ -91,8 +122,8 @@ describe('error handling', () => {
       fetch: fetchMock as typeof fetch,
     })
 
-    await expect(
-      skala.outcome({ request_id: 'req_bad', outcome: 'confirmed_fraud' })
-    ).rejects.toThrow('status 404')
+    await expect(skala.outcome({ request_id: 'req_bad', outcome: 'confirmed_fraud' })).rejects.toBeInstanceOf(
+      SkalaApiError
+    )
   })
 })
