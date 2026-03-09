@@ -1,3 +1,9 @@
+import {
+  SkalaApiError,
+  SkalaConfigError,
+  SkalaNetworkError,
+  SkalaTimeoutError,
+} from './errors.js'
 import type {
   OutcomeRequest,
   OutcomeResponse,
@@ -5,11 +11,13 @@ import type {
   ScoreRequest,
   ScoreResponse,
   SkalaOptions,
-} from './types'
+} from './types.js'
 
 const DEFAULT_BASE_URL = 'https://api.skala.dev'
 const DEFAULT_RETRIES = 2
 const DEFAULT_TIMEOUT_MS = 5_000
+
+type FallbackReasonCode = 'SDK_TIMEOUT_FALLBACK' | 'SDK_NETWORK_FALLBACK'
 
 function joinUrl(baseUrl: string, path: string): string {
   return `${baseUrl.replace(/\/+$/, '')}${path}`
@@ -19,37 +27,83 @@ function delay(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms))
 }
 
-function buildFallbackResponse(timeoutMs: number): ScoreFallbackResponse {
+function createRequestId(): string {
+  if (globalThis.crypto?.randomUUID) {
+    return globalThis.crypto.randomUUID()
+  }
+
+  return `${Date.now()}-${Math.random().toString(16).slice(2)}`
+}
+
+function buildFallbackResponse(
+  requestId: string,
+  latencyMs: number,
+  reasonCode: FallbackReasonCode
+): ScoreFallbackResponse {
   return {
-    request_id: 'sdk_timeout_fallback',
+    request_id: requestId,
     risk_score: 0,
     decision: 'allow',
-    reason_codes: ['SDK_TIMEOUT_FALLBACK'],
-    latency_ms: timeoutMs,
+    reason_codes: [reasonCode],
+    latency_ms: Math.max(0, Math.round(latencyMs)),
     fallback: true,
   }
 }
 
+function isAbortError(error: unknown): boolean {
+  return error instanceof Error && error.name === 'AbortError'
+}
+
 async function fetchWithTimeout(
-  request: () => Promise<Response>,
-  timeoutMs: number
+  request: (signal: AbortSignal) => Promise<Response>,
+  timeoutMs: number,
+  requestId: string
 ): Promise<Response> {
-  return Promise.race([
-    request(),
-    new Promise<Response>((_, reject) => {
-      const timer = setTimeout(() => {
-        clearTimeout(timer)
-        reject(new Error('SKALA_TIMEOUT'))
-      }, timeoutMs)
-    }),
-  ])
+  const controller = new AbortController()
+  let timer: ReturnType<typeof setTimeout> | undefined
+
+  const timeoutPromise = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => {
+      controller.abort()
+      reject(new SkalaTimeoutError(timeoutMs, requestId))
+    }, timeoutMs)
+  })
+
+  try {
+    return await Promise.race([request(controller.signal), timeoutPromise])
+  } catch (error) {
+    if (isAbortError(error)) {
+      throw new SkalaTimeoutError(timeoutMs, requestId, error)
+    }
+
+    throw error
+  } finally {
+    if (timer) {
+      clearTimeout(timer)
+    }
+  }
 }
 
 function buildRequestHeaders(apiKey: string, requestId: string): HeadersInit {
   return {
     Authorization: `Bearer ${apiKey}`,
+    Accept: 'application/json',
     'Content-Type': 'application/json',
     'X-Request-ID': requestId,
+  }
+}
+
+async function parseErrorBody(response: Response): Promise<unknown> {
+  const text = await response.text()
+
+  if (text.length === 0) {
+    return undefined
+  }
+
+  try {
+    return JSON.parse(text) as unknown
+  } catch (_parseError) {
+    return text
   }
 }
 
@@ -61,6 +115,18 @@ export class Skala {
   private readonly timeoutMs: number
 
   constructor(options: SkalaOptions) {
+    if (!options.apiKey || options.apiKey.trim().length === 0) {
+      throw new SkalaConfigError('Skala apiKey is required')
+    }
+
+    if (options.retries !== undefined && options.retries < 0) {
+      throw new SkalaConfigError('Skala retries must be greater than or equal to 0')
+    }
+
+    if (options.timeoutMs !== undefined && options.timeoutMs <= 0) {
+      throw new SkalaConfigError('Skala timeoutMs must be greater than 0')
+    }
+
     this.apiKey = options.apiKey
     this.baseUrl = options.baseUrl ?? DEFAULT_BASE_URL
     this.fetchImpl = options.fetch ?? fetch
@@ -69,19 +135,31 @@ export class Skala {
   }
 
   private async postJson<T>(path: string, payload: unknown): Promise<T> {
-    const requestId = crypto.randomUUID()
+    const requestId = createRequestId()
     let attempt = 0
 
     while (true) {
-      const response = await fetchWithTimeout(
-        () =>
-          this.fetchImpl(joinUrl(this.baseUrl, path), {
-            method: 'POST',
-            headers: buildRequestHeaders(this.apiKey, requestId),
-            body: JSON.stringify(payload),
-          }),
-        this.timeoutMs
-      )
+      let response: Response
+
+      try {
+        response = await fetchWithTimeout(
+          (signal) =>
+            this.fetchImpl(joinUrl(this.baseUrl, path), {
+              method: 'POST',
+              headers: buildRequestHeaders(this.apiKey, requestId),
+              body: JSON.stringify(payload),
+              signal,
+            }),
+          this.timeoutMs,
+          requestId
+        )
+      } catch (error) {
+        if (error instanceof SkalaTimeoutError) {
+          throw error
+        }
+
+        throw new SkalaNetworkError(requestId, error)
+      }
 
       if (response.status >= 500 && response.status < 600 && attempt < this.retries) {
         attempt += 1
@@ -90,7 +168,7 @@ export class Skala {
       }
 
       if (!response.ok) {
-        throw new Error(`Skala request failed with status ${response.status}`)
+        throw new SkalaApiError(response.status, await parseErrorBody(response), requestId)
       }
 
       return (await response.json()) as T
@@ -98,11 +176,27 @@ export class Skala {
   }
 
   async score(payload: ScoreRequest): Promise<ScoreResponse | ScoreFallbackResponse> {
+    const startedAt = Date.now()
+
     try {
       return await this.postJson<ScoreResponse>('/v1/score', payload)
     } catch (error) {
-      if (error instanceof Error && error.message === 'SKALA_TIMEOUT') {
-        return buildFallbackResponse(this.timeoutMs)
+      const elapsedMs = Date.now() - startedAt
+
+      if (error instanceof SkalaTimeoutError) {
+        return buildFallbackResponse(
+          error.requestId ?? createRequestId(),
+          elapsedMs,
+          'SDK_TIMEOUT_FALLBACK'
+        )
+      }
+
+      if (error instanceof SkalaNetworkError) {
+        return buildFallbackResponse(
+          error.requestId ?? createRequestId(),
+          elapsedMs,
+          'SDK_NETWORK_FALLBACK'
+        )
       }
 
       throw error
