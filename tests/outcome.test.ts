@@ -2,6 +2,7 @@
 
 import { describe, expect, it, mock } from 'bun:test'
 import { Skala } from '../src/client'
+import { SkalaNetworkError, SkalaTimeoutError } from '../src/errors'
 
 describe('Skala.outcome', () => {
   it('reports a confirmed fraud outcome', async () => {
@@ -77,8 +78,21 @@ describe('Skala.outcome', () => {
       timeoutMs: 50,
     })
 
-    await expect(
-      skala.outcome({ request_id: 'req_1', outcome: 'confirmed_fraud' })
-    ).rejects.toThrow('SKALA_TIMEOUT')
+    await expect(skala.outcome({ request_id: 'req_1', outcome: 'confirmed_fraud' })).rejects.toBeInstanceOf(
+      SkalaTimeoutError
+    )
+  })
+
+  it('throws a network error when API is unreachable', async () => {
+    const fetchMock = mock(() => Promise.reject(new TypeError('fetch failed')))
+
+    const skala = new Skala({
+      apiKey: 'sk_test',
+      fetch: fetchMock as typeof fetch,
+    })
+
+    await expect(skala.outcome({ request_id: 'req_2', outcome: 'converted' })).rejects.toBeInstanceOf(
+      SkalaNetworkError
+    )
   })
 })
