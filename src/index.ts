@@ -1,4 +1,11 @@
-export { Skala } from './client'
+export { Skala } from './client.js'
+export {
+  SkalaApiError,
+  SkalaConfigError,
+  SkalaError,
+  SkalaNetworkError,
+  SkalaTimeoutError,
+} from './errors.js'
 export type {
   OutcomeRequest,
   OutcomeResponse,
@@ -9,4 +16,4 @@ export type {
   SkalaEventType,
   SkalaOptions,
   SkalaOutcome,
-} from './types'
+} from './types.js'

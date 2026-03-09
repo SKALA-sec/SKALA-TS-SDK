@@ -15,7 +15,7 @@ export interface ScoreRequest {
   device_id?: string
   user_agent?: string
   form_fill_ms?: number
-  metadata?: Record<string, string>
+  metadata?: Record<string, unknown>
 }
 
 export interface ScoreResponse {
@@ -43,7 +43,7 @@ export interface OutcomeResponse {
 export interface SkalaOptions {
   apiKey: string
   baseUrl?: string
-  fetch?: typeof fetch
+  fetch?: typeof globalThis.fetch
   retries?: number
   timeoutMs?: number
 }
