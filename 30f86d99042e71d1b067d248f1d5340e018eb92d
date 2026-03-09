@@ -1,0 +1,36 @@
+sdk/src/release.test.ts
+  0987166758881268 12
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.9",
+  "base_commit_sha": "30f86d99042e71d1b067d248f1d5340e018eb92d",
+  "prompts": {
+    "0987166758881268": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a2ef0f40-20a2-4eeb-b3c1-3bf1c566fced",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "dev-dami <damiade5banjo@gmail.com>",
+      "messages": [],
+      "total_additions": 1,
+      "total_deletions": 14,
+      "accepted_lines": 1,
+      "overriden_lines": 0
+    },
+    "1d7fc775f3735531": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "ee300a75-abdb-49ff-9ea5-ec6de09e3e1c",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "dev-dami <damiade5banjo@gmail.com>",
+      "messages": [],
+      "total_additions": 0,
+      "total_deletions": 0,
+      "accepted_lines": 1906,
+      "overriden_lines": 0
+    }
+  }
+}
