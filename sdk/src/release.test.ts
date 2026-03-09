@@ -39,7 +39,7 @@ describe('sdk release assets', () => {
         '-lc',
         `rm -rf dist && tsc -p tsconfig.json && npm_config_cache=/tmp/skala-npm-cache npm pack --pack-destination ${JSON.stringify(
           packDir
-        )} >/dev/null && tar -tf ${JSON.stringify(join(packDir, 'skala-0.2.0.tgz'))}`,
+        )} >/dev/null && tar -tf ${JSON.stringify(join(packDir, 'skala-node-0.2.0.tgz'))}`,
       ],
       {
         cwd: sdkDir,

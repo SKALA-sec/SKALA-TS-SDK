@@ -1,5 +1,5 @@
 {
-  "name": "skala",
+  "name": "@skala/node",
   "version": "0.2.0",
   "description": "Skala abuse scoring SDK for Node and Bun",
   "license": "MIT",
@@ -30,7 +30,7 @@
   },
   "scripts": {
     "build": "rm -rf dist && tsc -p tsconfig.json",
-    "test": "bun test src/client.test.ts src/release.test.ts",
+    "test": "bun test src/client.test.ts src/client.edge-cases.test.ts src/release.test.ts",
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
