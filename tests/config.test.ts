@@ -2,6 +2,7 @@
 
 import { describe, expect, it, mock } from 'bun:test'
 import { Skala } from '../src/client'
+import { SkalaConfigError } from '../src/errors'
 
 const okScore = () =>
   new Response(
@@ -80,14 +81,30 @@ describe('configuration', () => {
     expect(result).toMatchObject({
       fallback: true,
       decision: 'allow',
-      latency_ms: 50,
+      reason_codes: ['SDK_TIMEOUT_FALLBACK'],
     })
+    expect(result.latency_ms).toBeGreaterThanOrEqual(50)
   })
 
   it('sends JSON content-type header', async () => {
     const fetchMock = mock(async (_input: RequestInfo | URL, init?: RequestInit) => {
       const headers = init?.headers as Record<string, string>
       expect(headers['Content-Type']).toBe('application/json')
+      return okScore()
+    })
+
+    const skala = new Skala({
+      apiKey: 'sk_test',
+      fetch: fetchMock as typeof fetch,
+    })
+
+    await skala.score({ event_type: 'login', ip: '10.0.0.1', email: 'a@b.com' })
+  })
+
+  it('sends Accept header for JSON responses', async () => {
+    const fetchMock = mock(async (_input: RequestInfo | URL, init?: RequestInit) => {
+      const headers = init?.headers as Record<string, string>
+      expect(headers['Accept']).toBe('application/json')
       return okScore()
     })
 
@@ -112,5 +129,23 @@ describe('configuration', () => {
     })
 
     await skala.score({ event_type: 'login', ip: '10.0.0.1', email: 'a@b.com' })
+  })
+
+  it('throws when apiKey is missing', () => {
+    expect(() => {
+      new Skala({ apiKey: '' })
+    }).toThrow(SkalaConfigError)
+  })
+
+  it('throws when retries is negative', () => {
+    expect(() => {
+      new Skala({ apiKey: 'sk_test', retries: -1 })
+    }).toThrow(SkalaConfigError)
+  })
+
+  it('throws when timeoutMs is not positive', () => {
+    expect(() => {
+      new Skala({ apiKey: 'sk_test', timeoutMs: 0 })
+    }).toThrow(SkalaConfigError)
   })
 })
