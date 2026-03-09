@@ -1,0 +1,45 @@
+sdk/src/client.ts
+  0987166758881268 7,10,56-61,63-69,71,78,80,83,86,102,105,108,110-111,113
+sdk/tests/outcome.test.ts
+  0987166758881268 1-84
+sdk/tests/score.test.ts
+  0987166758881268 1-187
+sdk/package.json
+  0987166758881268 33
+sdk/src/types.ts
+  0987166758881268 14,43,45
+sdk/tsconfig.json
+  0987166758881268 14
+sdk/.npmignore
+  0987166758881268 2
+sdk/tests/errors.test.ts
+  0987166758881268 1-98
+sdk/tests/config.test.ts
+  0987166758881268 1-116
+sdk/tests/release.test.ts
+  0987166758881268 1-52
+sdk/src/index.ts
+  0987166758881268 1,10
+sdk/README.md
+  0987166758881268 14,16,20-23,26,28-30,36,41-42,45,47,50,59-66
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.9",
+  "base_commit_sha": "0f27ce0614f1a5f1b934faf122c28ec1104804c6",
+  "prompts": {
+    "0987166758881268": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a2ef0f40-20a2-4eeb-b3c1-3bf1c566fced",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "dev-dami <damiade5banjo@gmail.com>",
+      "messages": [],
+      "total_additions": 604,
+      "total_deletions": 62,
+      "accepted_lines": 598,
+      "overriden_lines": 0
+    }
+  }
+}
