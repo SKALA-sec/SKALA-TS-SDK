@@ -25,8 +25,3 @@ const result = await client.score({
   email_hash: '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
 })
 ```
-
-## Release
-
-Use the manual checklist in `sdk/PUBLISHING.md`.
-The release path inspects a packed tarball with `tar -tf` before publish and uses npm provenance.

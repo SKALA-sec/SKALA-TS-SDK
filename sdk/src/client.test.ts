@@ -1,3 +1,5 @@
+/// <reference path="../bun-test.d.ts" />
+
 import { describe, expect, it, mock } from 'bun:test'
 import { createSkalaClient } from './client'
 

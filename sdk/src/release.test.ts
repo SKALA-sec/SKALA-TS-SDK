@@ -1,18 +1,19 @@
+/// <reference path="../bun-test.d.ts" />
+/// <reference types="node" />
+
 import { describe, expect, it } from 'bun:test'
 import { spawnSync } from 'node:child_process'
 import { mkdtempSync, readFileSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
-import { join, resolve } from 'node:path'
+import { dirname, join, resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
 
 describe('sdk release assets', () => {
-  it('defines npm publish metadata and release scaffolding', () => {
+  it('defines npm publish metadata', () => {
+    const currentDir = dirname(fileURLToPath(import.meta.url))
     const packageJson = JSON.parse(
-      readFileSync(resolve(import.meta.dir, '..', 'package.json'), 'utf8')
+      readFileSync(resolve(currentDir, '..', 'package.json'), 'utf8')
     ) as Record<string, unknown>
-    const publishingGuide = readFileSync(
-      resolve(import.meta.dir, '..', 'PUBLISHING.md'),
-      'utf8'
-    )
 
     expect(packageJson.publishConfig).toEqual({ access: 'public' })
     expect(packageJson).toHaveProperty('repository')
@@ -26,14 +27,11 @@ describe('sdk release assets', () => {
     expect(packageJson.bugs).toEqual({
       url: 'https://github.com/SKALA-sec/SKALA-TS-SDK/issues',
     })
-    expect(publishingGuide).toContain('npm publish --provenance --access public')
-    expect(publishingGuide).toContain('NPM_TOKEN')
-    expect(publishingGuide).toContain('npm pack --pack-destination')
-    expect(publishingGuide).toContain('tar -tf')
   })
 
   it('packs the built dist artifacts for npm release', () => {
-    const sdkDir = resolve(import.meta.dir, '..')
+    const currentDir = dirname(fileURLToPath(import.meta.url))
+    const sdkDir = resolve(currentDir, '..')
     const packDir = mkdtempSync(join(tmpdir(), 'skala-pack-'))
     const pack = spawnSync(
       'bash',
@@ -52,8 +50,8 @@ describe('sdk release assets', () => {
     expect(pack.status).toBe(0)
     const files = pack.stdout
       .split('\n')
-      .map((line) => line.trim())
-      .filter((line) => line.startsWith('package/'))
+      .map((line: string) => line.trim())
+      .filter((line: string) => line.startsWith('package/'))
 
     rmSync(packDir, { recursive: true, force: true })
 
