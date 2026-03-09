@@ -11,7 +11,7 @@ export type SkalaOutcome = 'confirmed_fraud' | 'false_positive' | 'converted'
 export interface ScoreRequest {
   event_type: SkalaEventType
   ip: string
-  email_hash: string
+  email: string
   device_id?: string
   user_agent?: string
   form_fill_ms?: number
@@ -40,9 +40,9 @@ export interface OutcomeResponse {
   identifiers_updated: number
 }
 
-export interface SkalaClientOptions {
-  baseUrl: string
+export interface SkalaOptions {
   apiKey: string
+  baseUrl?: string
   fetch?: typeof fetch
   retries?: number
   timeoutMs?: number

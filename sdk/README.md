@@ -11,47 +11,43 @@ npm install @skala/node
 ## Quick Start
 
 ```ts
-import { createSkalaClient } from '@skala/node'
+import { Skala } from '@skala/node';
 
-const skala = createSkalaClient({
-  baseUrl: 'https://api.skala.dev',
-  apiKey: 'sk_live_...',
-})
-```
+const skala = new Skala({ apiKey: 'sk_live_...' });
 
-## Score a Request
-
-```ts
 const result = await skala.score({
   event_type: 'signup',
-  ip: '203.0.113.10',
-  email_hash: '0123456789abcdef...',
-})
+  ip: req.ip,
+  email: body.email,
+  user_agent: req.headers['user-agent'],
+});
 
 if (result.decision === 'block') {
-  // reject the request
-} else if (result.decision === 'step_up') {
-  // require additional verification
+  return res.status(403).json({ error: 'Request blocked' });
+}
+
+if (result.decision === 'step_up') {
+  return res.status(200).json({ requires_verification: true });
 }
 ```
 
 ## Report an Outcome
 
-After confirming fraud or a false positive, report the outcome so future scoring improves:
+Feed back fraud signals to improve future scoring:
 
 ```ts
 await skala.outcome({
   request_id: result.request_id,
-  outcome: 'confirmed_fraud', // or 'false_positive' | 'converted'
-})
+  outcome: 'confirmed_fraud',
+});
 ```
 
-## Timeout & Fallback
+## Timeout Fallback
 
-The SDK returns a safe `allow` fallback if the API is unreachable, so scoring never blocks your users:
+The SDK auto-allows requests when the API is unreachable so scoring never blocks your users:
 
 ```ts
-const result = await skala.score({ ... })
+const result = await skala.score({ ... });
 
 if ('fallback' in result) {
   // API was unreachable — request was auto-allowed
@@ -60,13 +56,14 @@ if ('fallback' in result) {
 
 ## Configuration
 
-| Option | Default | Description |
-|---|---|---|
-| `baseUrl` | — | Skala API base URL |
-| `apiKey` | — | Your API key |
-| `timeoutMs` | `5000` | Request timeout in ms |
-| `retries` | `2` | Retry count for 5xx errors |
-| `fetch` | global `fetch` | Custom fetch implementation |
+```ts
+const skala = new Skala({
+  apiKey: 'sk_live_...',
+  baseUrl: 'https://api.skala.dev', // default
+  timeoutMs: 5000,                  // default
+  retries: 2,                       // default, only retries 5xx
+});
+```
 
 ## License
 

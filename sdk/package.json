@@ -30,7 +30,7 @@
   },
   "scripts": {
     "build": "rm -rf dist && tsc -p tsconfig.json",
-    "test": "bun test src/client.test.ts src/client.edge-cases.test.ts src/release.test.ts",
+    "test": "bun test tests/",
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {

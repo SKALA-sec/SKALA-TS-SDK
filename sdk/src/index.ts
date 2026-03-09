@@ -1,12 +1,12 @@
-export { createSkalaClient } from './client'
+export { Skala } from './client'
 export type {
   OutcomeRequest,
   OutcomeResponse,
   ScoreFallbackResponse,
   ScoreRequest,
   ScoreResponse,
-  SkalaClientOptions,
   SkalaDecision,
   SkalaEventType,
+  SkalaOptions,
   SkalaOutcome,
 } from './types'
