@@ -10,6 +10,7 @@ describe('Skala.score', () => {
       expect(init?.method).toBe('POST')
       expect(init?.headers).toMatchObject({
         Authorization: 'Bearer sk_test_123',
+        Accept: 'application/json',
         'Content-Type': 'application/json',
       })
       expect((init?.headers as Record<string, string>)['X-Request-ID']).toMatch(
@@ -181,6 +182,28 @@ describe('Skala.score', () => {
       decision: 'allow',
       risk_score: 0,
       reason_codes: ['SDK_TIMEOUT_FALLBACK'],
+      fallback: true,
+    })
+  })
+
+  it('returns allow fallback when API is unreachable', async () => {
+    const fetchMock = mock(() => Promise.reject(new TypeError('fetch failed')))
+
+    const skala = new Skala({
+      apiKey: 'sk_test_123',
+      fetch: fetchMock as typeof fetch,
+    })
+
+    const result = await skala.score({
+      event_type: 'signup',
+      ip: '203.0.113.9',
+      email: 'netdown@example.com',
+    })
+
+    expect(result).toMatchObject({
+      decision: 'allow',
+      risk_score: 0,
+      reason_codes: ['SDK_NETWORK_FALLBACK'],
       fallback: true,
     })
   })
