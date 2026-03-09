@@ -5,13 +5,13 @@ TypeScript SDK for the [Skala](https://github.com/SKALA-sec/SKALA-TS-SDK) abuse 
 ## Install
 
 ```bash
-npm install @skala/node
+npm install @skalaio/node
 ```
 
 ## Quick Start
 
 ```ts
-import { Skala } from '@skala/node';
+import { Skala } from '@skalaio/node';
 
 const skala = new Skala({ apiKey: 'sk_live_...' });
 
